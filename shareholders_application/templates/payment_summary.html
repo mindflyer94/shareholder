@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+         .error {
+            border: 1px solid red;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+            color: #fff !important;
+            text-decoration: none;
+            
+        }
+
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Four Dropdowns and Submit Button</title>
+    <!-- Link Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="ml-5 mt-4">
+    <a href="{% url 'shareholder_listing' %}" class="button">Shareholder</a> 
+    <a href="{% url 'share_amount_summary' %}" class="button">View Shares</a>   
+    </div>
+
+    <form id="paymentSummaryForm">
+        {% csrf_token %}
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <div class="container mt-5">
+            <div class="row align-items-center">
+                <div class="col">
+                    <select class="form-control" name="shareholder_id" id="shareholder_id">
+                        <option value="">select shareholder</option>
+                        {% for item in shareholders %}
+                            <option value="{{ item.id }}">{{ item.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col">
+                    <select class="form-control" name="month">
+                        <option value="">select month</option>
+                        {% for month in months %}
+                            <option value="{{ month.id }}">{{ month.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col">
+                    <select class="form-control" name="status">
+                        <option value="">select status</option>
+                    {% for status_choice in STATUS_CHOICES %}
+                        <option value="{{ status_choice.0 }}">{{ status_choice.1 }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+                <div class="col">
+                    <button type="saveButton" id="saveButton" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div id="cardContainer" class="container mt-5"></div>
+    <div id="tableContainer" class="container mt-5"></div>
+
+<script>
+    function submitForm() {
+        event.preventDefault();
+        if (validateForm()) {
+            var formData = $('#paymentSummaryForm').serialize();
+            $.ajax({
+                url: '/payment-summary',
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val()
+                },
+                data: formData,
+                success: function(response) {
+                    $('#tableContainer').empty();
+                    $('#cardContainer').empty();
+                 console.log(response);
+                var cardContainer = $('#cardContainer');
+                var card = $('<div>').addClass('card');
+                var cardBody = $('<div>').addClass('card-body').appendTo(card);
+                var row1 = $('<div>').addClass('row').appendTo(cardBody);
+
+                var totalAmount = $('<div>').addClass('col-lg-4').appendTo(row1);
+                $('<p>').text('Total Amount : '+ response.shareholder_details.annual_amount).appendTo(totalAmount);
+
+                var instalmentType = $('<div>').addClass('col-lg-4').appendTo(row1);
+                $('<p>').text('Installment Type : '+ response.shareholder_details.payment_mode).appendTo(instalmentType);
+
+               
+                var instalmentStartDate = $('<div>').addClass('col-lg-4').appendTo(row1);
+                $('<p>').text('Instalment Start On Date : '+ response.shareholder_details.start_date).appendTo(instalmentStartDate);
+
+
+                var row2 = $('<div>').addClass('row').appendTo(cardBody);
+                var duration = $('<div>').addClass('col-lg-4').appendTo(row2);
+                $('<p>').text('Duration : '+ response.shareholder_details.duration+ ' - Year').appendTo(duration);
+
+                var totalPaid = $('<div>').addClass('col-lg-4').appendTo(row2);
+                $('<p>').text('Total Paid : ' + (response.shareholder_details.total_paid_amount !== null ? response.shareholder_details.total_paid_amount : '')).appendTo(totalPaid);
+
+                var balanceAmount = $('<div>').addClass('col-lg-4').appendTo(row2);
+                $('<p>').text('Balance Amount : '+ (response.shareholder_details.annual_amount - response.shareholder_details.total_paid_amount)).appendTo(balanceAmount);
+
+
+                var row3 = $('<div>').addClass('row').appendTo(cardBody);
+                var assignedTo = $('<div>').addClass('col-lg-4').appendTo(row3);
+                $('<p>').text('Assigned Staff : '+ response.shareholder_details.staff_name).appendTo(assignedTo);
+                cardContainer.append(card);
+
+                var table = $('<table>').addClass('table');
+                    var thead = $('<thead>').appendTo(table);
+                    var tbody = $('<tbody>').appendTo(table);
+                    var trHead = $('<tr>').appendTo(thead);
+                    $('<th>').text('Shareholder Name').appendTo(trHead);
+                    $('<th>').text('Phone Number').appendTo(trHead);
+                    $('<th>').text('Status').appendTo(trHead);
+                    $('<th>').text('Due Date').appendTo(trHead);
+                    $('<th>').text('Paid Amount').appendTo(trHead);
+                    $('<th>').text('Balance Amount').appendTo(trHead);
+                    $('<th>').text('Action').appendTo(trHead); 
+                    $.each(response.payment_instalments, function(index, item) {
+                       var balance_amount = paid_amount = status ='';
+                        var tr = $('<tr>').appendTo(tbody);
+                        $('<td>').text(item.shareholder_name).appendTo(tr);
+                        $('<td>').text(item.shareholder_mobile_number).appendTo(tr);
+                        statusCell = $('<td>');
+                            if (item.status === 1){
+                                status = 'Paid';
+                                statusCell.css('color', 'green');
+                            }else{
+                                status =  'Pending';
+                                statusCell.css('color', 'orange');
+                            }
+                            statusCell.text(status).appendTo(tr);
+
+                        $('<td>').text(item.payment_date).appendTo(tr);
+
+                        paid_amount = item.status === 1 ? item.amount : ''; 
+                        $('<td>').text(paid_amount).appendTo(tr);
+
+                        balance_amount = item.status === 0 ? item.amount : ''; 
+                        $('<td>').text(balance_amount).appendTo(tr);
+                        if (!paid_amount){
+                            var button = $('<button>').addClass('btn btn-primary').text('make payment');
+                            $('<td>').append(button).appendTo(tr);
+                            button.on('click', function() {
+                            
+                                $.ajax({
+                                    url: 'update-payment/'+ item.id,  
+                                    method: 'PUT', 
+                                    headers: {
+                                        'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val()
+                                    }, 
+                                    contentType: 'application/json',
+                                    success: function(response) {
+                                        submitForm();    
+                                    },
+                                    error: function(xhr, status, error) {
+                                        console.error('Error:', error);
+                                    }
+                                });
+                            });
+                        }else{
+                            var actionSell = $('<td>').text('Payment Done').appendTo(tr);
+                                actionSell.css('color', 'green');
+                        }
+                       
+                    });
+
+                    $('#tableContainer').empty().append(table);
+                
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                }
+            });
+        }
+    }
+
+
+    $('#saveButton').on('click', function() {
+            submitForm();       
+     });
+
+    function validateForm() {
+        var isValid = true;
+        if (!$('#shareholder_id option:selected').val()) {
+            isValid = false;
+            $('#shareholder_id').addClass('is-invalid');
+        } else {
+            $('#shareholder_id').removeClass('is-invalid');
+        }
+        return isValid;
+    }
+
+</script>
+
+</body>
+</html>

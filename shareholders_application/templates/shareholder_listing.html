@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <title>Shareholders</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+    </style>
+</head>
+<body>
+    {% if check_share_exists %}
+    <script>
+        Toastify({
+            text: 'Share payment already exists for this shareholder.',
+            duration: 3000, // Duration in milliseconds
+            gravity: 'top', // Display position
+            position: 'right', // Display position
+            backgroundColor: 'linear-gradient(to right, #ff416c, #ff4b2b)', // Customize background color
+            stopOnFocus: true, // Stop timeout when the toast is clicked
+        }).showToast();
+    </script>
+    {% endif %}
+    
+    <h2>Shareholders</h2>
+    <a href="{% url 'create_shareholder' %}" class="button">Add New Shareholder</a> 
+    <a href="{% url 'share_amount_summary' %}" class="button">View Shares</a> 
+    <a href="{% url 'payment_summary' %}" class="button">Payment summary</a>   
+    <br>  <br>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Mobile Number</th>
+                <th>Country</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for shareholder in shareholders %}
+                <tr>
+                    <td>{{ shareholder.name }}</td>
+                    <td>{{ shareholder.email }}</td>
+                    <td>{{ shareholder.mobile_number }}</td>
+                    <td>{{ shareholder.country }}</td>
+                    <td><a href="{% url 'create_share_amount' shareholder.id %}">Add share amount</a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

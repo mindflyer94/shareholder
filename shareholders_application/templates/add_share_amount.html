@@ -1,0 +1,268 @@
+{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .error {
+            border: 1px solid red;
+        }
+
+        #saveButton {
+            background-color: #5007ef; /* Green */
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+
+        #addDateButton {
+            background-color: #a2ff03; /* Red */
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+
+        #addCustomInstalment {
+            margin-top: 10px;
+        }
+
+    </style>
+
+    <title>Share amount details</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <h2>Payment Schedule Generator</h2>
+    <form id="paymentForm">
+        {% csrf_token %}
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <input type="hidden" name="user_id" value="{{shareholder_id}}">
+
+        <label for="duration">Duration - Year:</label>
+            <select id="duration" name="duration">
+                <option value="">select</option>
+                {% for value in "12345" %}
+                    <option value="{{ value }}">{{ value }} Year</option>
+                {% endfor %}
+            </select><br><br>
+
+        <label for="totalAmount">Total Amount/year:</label>
+        <input type="number" id="totalAmount" name="totalAmount" min="1000" required><br><br>
+
+        <label for="instalmentType">Instalment Type:</label>
+        <select id="instalmentType" name="instalmentType">
+            <option value="">select</option>
+            {% for key, value in instalment_type %}
+                <option value="{{ key }}">{{ value }}</option>
+            {% endfor %}
+        </select><br><br>
+        
+        
+        <label for="startDate">First Instalment Start Date:</label>
+        <input type="date" id="startDate" name="startDate" required><br><br>
+
+        <label for="totalAmount">Payment Mode:</label>
+        <input type="text" id="payment_mode" name="payment_mode" required><br><br>
+
+        <label for="totalAmount">Staff Name:</label>
+        <input type="text" id="Staff_name" name="Staff_name"  required><br><br>
+
+        <button class="primary" type="button" id="saveButton">Save Data</button> 
+        <div id="addCustomInstalment" style="display: none;">
+            <button type="button" id="addDateButton">Add custome Date</button>
+        </div>
+        <div id="customInstalments"></div>
+    </form>
+
+<div class="payment_schedule" style="display: none;">
+    <h3>Payment Schedule</h3>
+    <table id="paymentSchedule" border="1px" style="width: fit-content;">
+        <thead>
+            <tr>
+                <th>Due Date</th>
+                <th>Instalment Amount</th>
+            </tr>
+        </thead>
+        <tbody id="scheduleBody">
+        </tbody>
+    </table>
+</div>
+
+    <script>
+        $('#saveButton').on('click', function() {
+            event.preventDefault();
+            if (validateForm()) {
+                var formData = $('#paymentForm').serialize();
+                $.ajax({
+                    url: '/save-payment-data/',
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val()
+                    },
+                    data: formData,
+                    success: function(response) {
+                        alert('Data saved successfully');
+                        window.location.href = '/';
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error:', error);
+                    }
+                });
+            }
+        });
+
+    function validateForm() {
+        var isValid = true;
+        $('#paymentForm input, #paymentForm select').each(function() {
+            if (!$(this).val()) {
+                isValid = false;
+                $(this).addClass('error');
+            } else {
+                $(this).removeClass('error');
+            }
+        });
+        return isValid;
+    }
+
+        $(document).ready(function(){
+            function generatePaymentSchedule() {
+                $('#scheduleBody').empty();
+                var duration =  $('#duration option:selected').val();
+                var totalAmount = $('#totalAmount').val();
+                var startDate = $('#startDate').val();
+                var instalmentType = $('#instalmentType option:selected').val();
+                // console.log(duration,'duration')
+                // console.log(totalAmount,'totalAmount')
+                // console.log(startDate,'startDate')
+                // console.log(instalmentType,'instalmentType')
+                if (duration && totalAmount && startDate && instalmentType != 'custom') {
+                    $.ajax({
+                        url: '/generate_payment_schedule/',
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': $('input[name="csrfmiddlewaretoken"]').val()
+                        },
+                        data: {
+                            duration: duration,
+                            annual_amount: totalAmount,
+                            instalment_type: instalmentType,
+                            start_date: startDate
+                        },
+                        success: function(response){
+                            $('#scheduleBody').empty();
+                            var paymentSchedule = response.payment_schedule;
+                            $('.payment_schedule').css('display', 'block');
+
+                            $.each(paymentSchedule, function(index, payment){
+                                var row = $('<tr>');
+                                row.append($('<td>').text(payment.due_date));
+                                row.append($('<td>').text(payment.instalment_amount));
+                                $('#scheduleBody').append(row);
+                                $('<input>').attr({
+                                    type: 'hidden',
+                                    name: 'due_date[]',
+                                    value: payment.due_date
+                                }).appendTo('#paymentForm');
+
+                                $('<input>').attr({
+                                    type: 'hidden',
+                                    name: 'instalment_amount[]',
+                                    value: payment.instalment_amount
+                                }).appendTo('#paymentForm');
+                            });
+                        },
+                        error: function(xhr, status, error){
+                            console.error('Error:', error);
+                        }
+                    });
+                }
+            }
+
+            
+            $('#duration, #totalAmount, #startDate, #instalmentType').on('change', function() {
+                generatePaymentSchedule();
+            });
+
+
+            generatePaymentSchedule();
+        });
+
+
+        $(document).ready(function() {
+
+
+            function addCustomInstalmentRow() {
+                //var row = $('<div class="custom-instalment-row">');
+                var dueDateInput = $('<input>').attr({
+                    type: 'date',
+                    name: 'due_date[]',
+                    placeholder: 'Due Date (YYYY-MM-DD)',
+                    required: true
+                });
+                var amountInput = $('<input>').attr({
+                    type: 'number',
+                    name: 'instalment_amount[]',
+                    placeholder: 'Instalment Amount',
+                    step: '0.01',
+                    required: true
+                });
+                $('#customInstalments').append(dueDateInput).append(amountInput);
+                $('#paymentForm').append(row);
+            }
+            
+            $('#instalmentType').on('change', function() {
+                var selectedOption = $(this).val();
+                if (selectedOption === 'custom') {
+                    $('#addCustomInstalment').show();
+                    addCustomInstalmentRow();
+
+                } else {
+                    $('#addCustomInstalment').hide();
+                    $('#customInstalments').empty();
+                }
+            });
+
+            $('#addCustomInstalment').on('click', '#addDateButton', function() {
+                var newRow = $('<div class="custom-instalment-row"></div>');
+
+                var dueDateInput = $('<input>').attr({
+                    type: 'date',
+                    name: 'due_date[]',
+                    placeholder: 'Due Date (YYYY-MM-DD)',
+                    required: true
+                });
+
+                var instalmentAmountInput = $('<input>').attr({
+                    type: 'number',
+                    name: 'instalment_amount[]',
+                    placeholder: 'Instalment Amount',
+                    min: '0.01',
+                    step: '0.01',
+                    required: true
+                });
+
+                var removeIcon = $('<i class="fas fa-times-circle remove-icon"></i>').click(function() {
+                    $(this).closest('.custom-instalment-row').remove();
+                });
+
+                newRow.append(dueDateInput, instalmentAmountInput, removeIcon);
+                $('#customInstalments').append(newRow);
+            });
+        });
+
+
+    </script>
+</body>
+</html>

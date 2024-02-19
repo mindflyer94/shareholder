@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Data</title>
+    <!-- Add your CSS for styling here -->
+    <style>
+        /* Example CSS for styling the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .card {
+            margin-bottom: 20px;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+            color: #fff !important;
+            text-decoration: none;
+            
+        }
+    </style>
+</head>
+<body class="ml-5 mr-5"> <br><br>
+    <a href="{% url 'payment_summary' %}" class="button">Payment summary</a>   
+    <a href="{% url 'shareholder_listing' %}" class="button">Shareholder</a> 
+    <br> <br>
+
+    <h3 style="color: rgb(166, 41, 41);">Share Amount Summary - {{month_name}}</h3>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Expected Amount :</h5>
+                        <p class="card-text">{{ total_expected_amount }} INR</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Collected Amount :</h5>
+                        <p class="card-text">{{ total_collected_amount }} INR</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Due Amount :</h5>
+                        <p class="card-text">{{ due_amount }} INR</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <table>
+        <h5>Instalment Due Amount Details - {{month_name}}</h5>
+        <thead>
+            <tr>
+                <th>Shareholder</th>
+                <th>Payment Date</th>
+                <th>Amount</th>
+                <th>Paid At</th>
+                <th>Paid Amount (INR)</th>
+                <th>Balance Amount (INR)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in monthly_summary %}
+            <tr>
+                <input type="hidden" name="id" value="{{ entry.id }}">
+                <td>{{ entry.share_payment__shareholder__name }}</td>
+                <td>{{ entry.payment_date }}</td>
+                <td>{{ entry.amount }}</td>
+                <td>{% if entry.paid_at %}{{  entry.paid_at }}{% else %}{% endif %}</td>
+                <td>{% if entry.status == 1 %}{{ entry.amount }}{% else %}{% endif %}</td>
+                <td style="color: white;background-color: orange;">{{ entry.total_amount}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>
